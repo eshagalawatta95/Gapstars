@@ -140,8 +140,7 @@ else
 
             if (SelectedTrack != null)
             {
-                await PlaylistService
-                    .AddTracksToPlaylistAsync(SelectedPlaylist.PlaylistId, new List<long>() { SelectedTrack.TrackId });
+                await PlaylistService.AddTracksToPlaylistAsync(SelectedPlaylist.PlaylistId, SelectedTrack.TrackId);
                 CloseInfoMessage();
 
                 InfoMessage = $"Track {Artist?.Name} - {SelectedTrack?.AlbumTitle} - {SelectedTrack?.TrackName} added to playlist {SelectedPlaylist?.Name}.";

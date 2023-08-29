@@ -35,11 +35,15 @@ namespace Chinook.Services
 
             if (favoritePlaylist == null)
             {
-                await CreateFavoritePlaylistAsync(userId);
+                favoritePlaylist = await CreateFavoritePlaylistAsync(userId);
             }
             var track = dbContext.Tracks.Find(trackId);
             if (track != null)
             {
+                if (favoritePlaylist.Tracks.Contains(track))
+                {
+                    throw new InvalidOperationException("track Id already added to favourite list.");
+                }
                 favoritePlaylist.Tracks.Add(track);
                 await dbContext.SaveChangesAsync();
             }
@@ -89,7 +93,7 @@ namespace Chinook.Services
             }
 
             using var dbContext = await _dbFactory.CreateDbContextAsync();
-            var playlists = await dbContext.Playlists
+            var playlists = await dbContext.Playlists.Include(u => u.UserPlaylists)
                              .Include(p => p.Tracks).ThenInclude(t => t.Album).ThenInclude(g => g.Artist)
                              .Where(p => p.PlaylistId == playlistId)
                              .AsNoTracking()
@@ -110,18 +114,18 @@ namespace Chinook.Services
 
             var userHasFavoritePlaylist = await dbContext.Playlists
                 .Include(u => u.UserPlaylists)
-                .Where(p => p.UserPlaylists.Any(up => up.UserId == userId 
+                .Where(p => p.UserPlaylists.Any(up => up.UserId == userId
                                 && up.Playlist.Name == Constants.FavoriteTracksPlayListName))
                 .AnyAsync();
 
             return userHasFavoritePlaylist;
         }
 
-        public async Task AddTracksToPlaylistAsync(long playlistId, List<long> trackIds)
+        public async Task AddTracksToPlaylistAsync(long playlistId, long trackId)
         {
             if (playlistId < 1)
             {
-                throw new InvalidOperationException("Invalid playlistId.");
+                throw new InvalidOperationException("Invalid playlist Id.");
             }
 
             using var dbContext = await _dbFactory.CreateDbContextAsync();
@@ -129,23 +133,28 @@ namespace Chinook.Services
                                             .FirstOrDefaultAsync(p => p.PlaylistId == playlistId);
             if (playlist != null)
             {
-                var tracksToAdd = await dbContext.Tracks.Where(t => trackIds.Contains(t.TrackId)).ToListAsync();
+                var trackToAdd = await dbContext.Tracks.Where(t => t.TrackId == trackId).FirstAsync();
 
-                foreach (var track in tracksToAdd)
+                if (!playlist.Tracks.Any(pt => pt.TrackId == trackToAdd.TrackId))
                 {
-                    if (!playlist.Tracks.Any(pt => pt.TrackId == track.TrackId))
-                    {
-                        playlist.Tracks.Add(track);
-                    }
+                    playlist.Tracks.Add(trackToAdd);
+                    await dbContext.SaveChangesAsync();
                 }
-                await dbContext.SaveChangesAsync();
+                else
+                {
+                    throw new InvalidOperationException($"{trackToAdd.Name} Already added to playlist {playlist.Name}.");
+                }
+            }
+            else
+            {
+                throw new InvalidOperationException($"Playlist id {playlistId} not found.");
             }
         }
 
         public async Task<List<PlayList>> GetPlaylistsAsync()
         {
             using var dbContext = await _dbFactory.CreateDbContextAsync();
-            var playlists = await dbContext.Playlists
+            var playlists = await dbContext.Playlists.Include(x => x.UserPlaylists)
                           .OrderByDescending(p => p.Name == Constants.FavoriteTracksPlayListName)
                           .ThenBy(p => p.PlaylistId)
                           .ToListAsync();
@@ -222,7 +231,7 @@ namespace Chinook.Services
             }
         }
 
-        private async Task<long> CreateFavoritePlaylistAsync(string userId)
+        private async Task<Playlist> CreateFavoritePlaylistAsync(string userId)
         {
             using var dbContext = await _dbFactory.CreateDbContextAsync();
 
@@ -238,9 +247,8 @@ namespace Chinook.Services
 
             dbContext.Playlists.Add(favoritePlaylist);
             await dbContext.SaveChangesAsync();
-            return favoritePlaylist.PlaylistId;
+            return favoritePlaylist;
         }
-
 
         //temp method due to db error.
         //need to add auto increment to PlaylistId column of playlist table.

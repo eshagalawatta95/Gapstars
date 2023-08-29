@@ -57,6 +57,7 @@ namespace Chinook.Services
             var tracks = await dbContext.Tracks
                 .Where(a => a.Album.ArtistId == artistId)
                 .Include(a => a.Album)
+                .Include(p => p.Playlists).ThenInclude(u => u.UserPlaylists)
                 .AsNoTracking().Select(t => CustomMapper.MapToViewModel(t, userId))
                 .ToListAsync()
                 .ConfigureAwait(false);

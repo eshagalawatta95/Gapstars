@@ -29,12 +29,12 @@ namespace Chinook.Services
         Task<bool> IsUserHasFavoritePlaylistAsync(string userId);
 
         /// <summary>
-        /// Adds multiple tracks to a playlist.
+        /// Adds track to a playlist.
         /// </summary>
         /// <param name="playlistId">The ID of the playlist.</param>
-        /// <param name="trackIds">A list of track IDs to be added to the playlist.</param>
+        /// <param name="trackId">Track Id to be added to the playlist.</param>
         /// <returns>A task representing the asynchronous operation.</returns>
-        Task AddTracksToPlaylistAsync(long playlistId, List<long> trackIds);
+        Task AddTracksToPlaylistAsync(long playlistId, long trackId);
 
         /// <summary>
         /// Removes a track from a playlist.

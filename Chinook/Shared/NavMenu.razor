@@ -24,7 +24,7 @@
 
             @foreach (var playlist in UserPlaylists)
             {
-                <NavLink class="nav-link" href="@($"playlist/{playlist.PlaylistId}")">
+                <NavLink class="nav-link" href="javascript:void(0);" @onclick="() => OpenPlaylistPage(playlist.PlaylistId)">
                     <i class="bi bi-music-note-list me-3" style="font-size: 1.25em"></i> @playlist.Name
                 </NavLink>
             }
@@ -42,6 +42,7 @@
     private List<PlayList> UserPlaylists = new List<PlayList>();
     [Inject] private Services.IPlaylistService PlaylistService { get; set; }
     [Inject] private Services.ISharedService SharedService { get; set; }
+    @inject NavigationManager NavigationManager
 
     private void ToggleNavMenu()
     {
@@ -67,5 +68,11 @@
         var user = (await authenticationState).User;
         var userId = user.FindFirst(u => u.Type.Contains(ClaimTypes.NameIdentifier))?.Value;
         return userId;
+    }
+
+    private void OpenPlaylistPage(long playlistId)
+    {
+        string url = $"playlist/{playlistId}";
+        NavigationManager.NavigateTo(url, forceLoad: true);
     }
 }
