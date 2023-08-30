@@ -1,9 +1,7 @@
 ﻿@page "/artist/{ArtistId:long}"
 @attribute [Authorize]
 
-@using Chinook.Models
 @using Chinook.ClientModels
-@using Microsoft.EntityFrameworkCore
 @using System.Security.Claims
 
 @if (!string.IsNullOrWhiteSpace(InfoMessage))
@@ -70,16 +68,17 @@ else
     private string CurrentUserId;
     private string NewPlaylistName;
 
-    //Note: can ExceptionHandlingMiddleware for Exception Handling. If want
-    protected override async Task OnInitializedAsync()
+    //Note: can ExceptionHandlingMiddleware for Exception Handling, If want.
+
+    protected override async Task OnParametersSetAsync()
     {
-        await InvokeAsync(StateHasChanged);
         try
         {
             CurrentUserId = await GetUserId();
             Artist = await ArtistService.GetArtistAsync(ArtistId);
             Playlists = await PlaylistService.GetPlaylistsAsync(CurrentUserId);
             Tracks = await ArtistService.GetTracksForArtistAsync(ArtistId, CurrentUserId);
+            await InvokeAsync(StateHasChanged);
         }
         catch (Exception ex)
         {
@@ -102,12 +101,12 @@ else
             if (favorite)
             {
                 await PlaylistService.AddFavoriteTrackAsync(CurrentUserId, trackId);
-                InfoMessage = $"Track {track?.ArtistName} - {track?.AlbumTitle} - {track?.TrackName} added to playlist Favorites.";
+                InfoMessage = $"Track {track?.ArtistName} - {track?.AlbumTitle} - {track?.TrackName} added to playlist My favorite tracks.";
             }
             else
             {
                 await PlaylistService.UnFavoriteTrackAsync(CurrentUserId, trackId);
-                InfoMessage = $"Track {track?.ArtistName} - {track?.AlbumTitle} - {track?.TrackName} removed from playlist Favorites.";
+                InfoMessage = $"Track {track?.ArtistName} - {track?.AlbumTitle} - {track?.TrackName} removed from playlist My favorite tracks.";
             }
             Tracks = await ArtistService.GetTracksForArtistAsync(ArtistId, CurrentUserId);
         }
@@ -145,6 +144,7 @@ else
 
                 InfoMessage = $"Track {Artist?.Name} - {SelectedTrack?.AlbumTitle} - {SelectedTrack?.TrackName} added to playlist {SelectedPlaylist?.Name}.";
                 NewPlaylistName = string.Empty; //clear the input text box.
+                Tracks = await ArtistService.GetTracksForArtistAsync(ArtistId, CurrentUserId);
                 PlaylistDialog.Close();
             }
         }

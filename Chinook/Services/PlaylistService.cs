@@ -42,7 +42,7 @@ namespace Chinook.Services
             {
                 if (favoritePlaylist.Tracks.Contains(track))
                 {
-                    throw new InvalidOperationException("track Id already added to favourite list.");
+                    throw new InvalidOperationException($"track Id {trackId} already added to favourite list.");
                 }
                 favoritePlaylist.Tracks.Add(track);
                 await dbContext.SaveChangesAsync();
@@ -93,12 +93,19 @@ namespace Chinook.Services
             }
 
             using var dbContext = await _dbFactory.CreateDbContextAsync();
-            var playlists = await dbContext.Playlists.Include(u => u.UserPlaylists)
-                             .Include(p => p.Tracks).ThenInclude(t => t.Album).ThenInclude(g => g.Artist)
-                             .Where(p => p.PlaylistId == playlistId)
-                             .AsNoTracking()
-                             .Select(p => CustomMapper.MapToViewModel(p, userId))
-                             .FirstOrDefaultAsync();
+            var favouriteTrackIds = await dbContext.Playlists
+                        .Where(p => p.UserPlaylists.Any(up => up.UserId == userId) &&
+                                p.Name == Constants.FavoriteTracksPlayListName)
+                        .AsNoTracking()
+                        .SelectMany(p => p.Tracks.Select(t => t.TrackId))
+                        .ToListAsync();
+
+            var playlists = await dbContext.Playlists
+                          .Include(p => p.Tracks).ThenInclude(t => t.Album).ThenInclude(g => g.Artist)
+                          .Where(p => p.PlaylistId == playlistId)
+                          .Select(p => CustomMapper.MapToViewModel(p, favouriteTrackIds))
+                          .AsNoTracking()
+                          .FirstOrDefaultAsync();
 
             return playlists;
         }
@@ -247,6 +254,8 @@ namespace Chinook.Services
 
             dbContext.Playlists.Add(favoritePlaylist);
             await dbContext.SaveChangesAsync();
+            _sharedService.NotifyPlaylistsChanged();
+
             return favoritePlaylist;
         }
 

@@ -2,8 +2,6 @@
 @attribute [Authorize]
 
 @using Chinook.ClientModels;
-@using Chinook.Models
-@using Microsoft.EntityFrameworkCore
 @using System.Security.Claims;
 
 <h1>Playlist <strong>@Playlist.Name</strong></h1>
@@ -64,12 +62,22 @@ else
     private string CurrentUserId;
     private string InfoMessage;
 
-
-    protected override async Task OnInitializedAsync()
+    protected override async Task OnParametersSetAsync()
     {
-        await InvokeAsync(StateHasChanged);
-        CurrentUserId = await GetUserId();
-        await LoadPlaylist();
+        try
+        {
+            CurrentUserId = await GetUserId();
+            await LoadPlaylist();
+            await InvokeAsync(StateHasChanged);
+        }
+        catch (InvalidOperationException ex)
+        {
+            InfoMessage = ex.Message;
+        }
+        catch (Exception ex)
+        {
+            InfoMessage = ex.Message;
+        }
     }
 
     private async Task<string> GetUserId()
@@ -87,12 +95,12 @@ else
             if (favorite)
             {
                 await PlaylistService.AddFavoriteTrackAsync(CurrentUserId, trackId);
-                InfoMessage = $"Track {track?.ArtistName} - {track?.AlbumTitle} - {track?.TrackName} added to playlist Favorites.";
+                InfoMessage = $"Track {track?.ArtistName} - {track?.AlbumTitle} - {track?.TrackName} added to playlist My favorite tracks.";
             }
             else
             {
                 await PlaylistService.UnFavoriteTrackAsync(CurrentUserId, trackId);
-                InfoMessage = $"Track {track?.ArtistName} - {track?.AlbumTitle} - {track?.TrackName} removed from playlist Favorites.";
+                InfoMessage = $"Track {track?.ArtistName} - {track?.AlbumTitle} - {track?.TrackName} removed from playlist My favorite tracks.";
             }
             await LoadPlaylist();
         }
@@ -134,9 +142,9 @@ else
 
     private async Task LoadPlaylist()
     {
-        try 
-        { 
-            Playlist = await PlaylistService.GetPlaylistAsync(CurrentUserId, PlaylistId); 
+        try
+        {
+            Playlist = await PlaylistService.GetPlaylistAsync(CurrentUserId, PlaylistId);
         }
         catch (Exception ex)
         {
